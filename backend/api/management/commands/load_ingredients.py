@@ -1,12 +1,14 @@
 import csv
 from django.core.management.base import BaseCommand
 from api.models import Ingredient
+import os
+from django.conf import settings
 
 class Command(BaseCommand):
     help = "Загрузить ингредиенты из CSV файла"
 
     def handle(self, *args, **kwargs):
-        file_path = "D:/dev/foodgram/data/ingredients.csv"
+        file_path = os.path.join(settings.BASE_DIR, "data", "ingredients.csv")
 
         try:
             with open(file_path, "r", encoding="utf-8") as file:
