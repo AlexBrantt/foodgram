@@ -1,35 +1,40 @@
 import hashlib
-from django.shortcuts import get_object_or_404
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-from rest_framework.generics import ListAPIView
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.conf import settings
-from utils.pagination import CustomPageNumberPagination
-from .models import (Recipe, Ingredient, Tag, Subscription,
-                     FavoriteRecipe, ShoppingList, User)
-from .serializers import (RecipeSerializer, IngredientSerializer,
-                          TagSerializer, SubscriptionSerializer,
-                          FavoriteRecipeSerializer, FavoriteRecipeSerializer,
-                          ShoppingListSerializer, SubscriptionDetailSerializer,
-                          RecipeDetailSerializer)
-from django.http import Http404, HttpResponse
-from collections import defaultdict
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
-from api.models import Recipe
-from django.http import Http404
-import hashlib
-from .filters import RecipeFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import (
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+)
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+
+from api.filters import RecipeFilter
+from api.models import (
+    FavoriteRecipe,
+    Ingredient,
+    Recipe,
+    ShoppingList,
+    Subscription,
+    Tag,
+    User,
+)
+from api.serializers import (
+    FavoriteRecipeSerializer,
+    IngredientSerializer,
+    RecipeDetailSerializer,
+    RecipeSerializer,
+    ShoppingListSerializer,
+    SubscriptionDetailSerializer,
+    TagSerializer,
+)
+from utils.pagination import CustomPageNumberPagination
 
 
 class ShortLinkView(APIView):
@@ -37,22 +42,25 @@ class ShortLinkView(APIView):
 
     def get(self, request, id):
         try:
-            recipe = get_object_or_404(Recipe, id=id)
+            _ = get_object_or_404(Recipe, id=id)
 
-            base_url = f"{request.scheme}://{request.META['HTTP_HOST']}"
+            url = f"{request.scheme}://{request.META['HTTP_HOST']}"
 
-            short_link = f"{base_url}/s/{hashlib.md5(str(id).encode()).hexdigest()[:5]}"
-       
-            return Response({"short-link": short_link}, status=status.HTTP_200_OK)
+            short = f"{url}/s/{hashlib.md5(str(id).encode()).hexdigest()[:5]}"
+
+            return Response({"short-link": short}, status=status.HTTP_200_OK)
 
         except Http404:
-            return Response({"detail": "Страница не найдена."}, status=status.HTTP_404_NOT_FOUND)
-
-    
+            return Response(
+                {"detail": "Страница не найдена."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
 
 class RecipeViewSet(ModelViewSet):
-    queryset = Recipe.objects.prefetch_related('tags', 'recipe_ingredients__ingredient')
+    queryset = Recipe.objects.prefetch_related(
+        'tags', 'recipe_ingredients__ingredient'
+    )
     permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = CustomPageNumberPagination
     filter_backends = [DjangoFilterBackend]
@@ -82,13 +90,15 @@ class RecipeViewSet(ModelViewSet):
         page = self.paginate_queryset(queryset)
 
         if page is not None:
-            serializer = RecipeDetailSerializer(page, many=True, context={'request': request})
+            serializer = RecipeDetailSerializer(
+                page, many=True, context={'request': request}
+            )
             return self.get_paginated_response(serializer.data)
 
-        serializer = RecipeDetailSerializer(queryset, many=True, context={'request': request})
+        serializer = RecipeDetailSerializer(
+            queryset, many=True, context={'request': request}
+        )
         return Response(serializer.data)
-    
-
 
 
 class TagViewSet(ModelViewSet):
@@ -121,7 +131,9 @@ class IngredientListView(APIView):
     def get(self, request, *args, **kwargs):
         name_filter = request.query_params.get('name', '').lower()
         if name_filter:
-            ingredients = Ingredient.objects.filter(name__istartswith=name_filter)
+            ingredients = Ingredient.objects.filter(
+                name__istartswith=name_filter
+            )
         else:
             ingredients = Ingredient.objects.all()
         serializer = IngredientSerializer(ingredients, many=True)
@@ -135,19 +147,29 @@ class SubscribeView(APIView):
         author = get_object_or_404(User, id=id)
 
         if request.user == author:
-            return Response({"error": "Нельзя подписаться на самого себя"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Нельзя подписаться на самого себя"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        if Subscription.objects.filter(user=request.user, author=author).exists():
-            return Response({"error": "Вы уже подписаны на этого автора"}, status=status.HTTP_400_BAD_REQUEST)
+        if Subscription.objects.filter(
+            user=request.user, author=author
+        ).exists():
+            return Response(
+                {"error": "Вы уже подписаны на этого автора"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        subscription = Subscription.objects.create(user=request.user, author=author)
+        subscription = Subscription.objects.create(
+            user=request.user, author=author
+        )
 
         serializer = SubscriptionDetailSerializer(
-            subscription, 
+            subscription,
             context={
                 'request': request,
-                'limit': request.query_params.get('limit')
-            }
+                'limit': request.query_params.get('limit'),
+            },
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -155,19 +177,25 @@ class SubscribeView(APIView):
         author = get_object_or_404(User, id=id)
 
         try:
-            subscription = Subscription.objects.get(user=request.user, author=author)
+            subscription = Subscription.objects.get(
+                user=request.user, author=author
+            )
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Subscription.DoesNotExist:
-            return Response({"error": "Вы не подписаны на этого автора"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Вы не подписаны на этого автора"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        
+
 class SubscriptionPagination(PageNumberPagination):
     def get_page_size(self, request):
         try:
             return int(request.query_params.get('limit', self.page_size))
         except (TypeError, ValueError):
             return self.page_size
+
 
 class SubscriptionListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -177,40 +205,50 @@ class SubscriptionListView(APIView):
         subscriptions = Subscription.objects.filter(user=user)
 
         paginator = SubscriptionPagination()
-        paginated_subscriptions = paginator.paginate_queryset(subscriptions, request)
-
-        serializer = SubscriptionDetailSerializer(
-            paginated_subscriptions,
-            many=True,
-            context={'request': request}
+        paginated_subscriptions = paginator.paginate_queryset(
+            subscriptions, request
         )
 
-        # Ответ с пагинацией
+        serializer = SubscriptionDetailSerializer(
+            paginated_subscriptions, many=True, context={'request': request}
+        )
+
         return paginator.get_paginated_response(serializer.data)
 
-        
 
 class FavoriteRecipeView(APIView):
     def post(self, request, id):
         recipe = get_object_or_404(Recipe, id=id)
-        
-        if FavoriteRecipe.objects.filter(user=request.user, recipe=recipe).exists():
-            return Response({"error": "Рецепт уже в избранном"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        favorite = FavoriteRecipe.objects.create(user=request.user, recipe=recipe)
-        
+
+        if FavoriteRecipe.objects.filter(
+            user=request.user, recipe=recipe
+        ).exists():
+            return Response(
+                {"error": "Рецепт уже в избранном"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        favorite = FavoriteRecipe.objects.create(
+            user=request.user, recipe=recipe
+        )
+
         serializer = FavoriteRecipeSerializer(favorite)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
         recipe = get_object_or_404(Recipe, id=id)
-        
+
         try:
-            favorite = FavoriteRecipe.objects.get(user=request.user, recipe=recipe)
+            favorite = FavoriteRecipe.objects.get(
+                user=request.user, recipe=recipe
+            )
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except FavoriteRecipe.DoesNotExist:
-            return Response({"error": "Рецепт отсутствует в избранном"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Рецепт отсутствует в избранном"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class ShoppingCartView(APIView):
@@ -219,10 +257,17 @@ class ShoppingCartView(APIView):
     def post(self, request, id):
         recipe = get_object_or_404(Recipe, id=id)
 
-        if ShoppingList.objects.filter(user=request.user, recipe=recipe).exists():
-            return Response({"error": "Рецепт уже в списке покупок"}, status=status.HTTP_400_BAD_REQUEST)
-  
-        shopping_item = ShoppingList.objects.create(user=request.user, recipe=recipe)
+        if ShoppingList.objects.filter(
+            user=request.user, recipe=recipe
+        ).exists():
+            return Response(
+                {"error": "Рецепт уже в списке покупок"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        shopping_item = ShoppingList.objects.create(
+            user=request.user, recipe=recipe
+        )
 
         serializer = ShoppingListSerializer(shopping_item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -230,11 +275,16 @@ class ShoppingCartView(APIView):
     def delete(self, request, id):
         recipe = get_object_or_404(Recipe, id=id)
         try:
-            shopping_item = ShoppingList.objects.get(user=request.user, recipe=recipe)
+            shopping_item = ShoppingList.objects.get(
+                user=request.user, recipe=recipe
+            )
             shopping_item.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ShoppingList.DoesNotExist:
-            return Response({"error": "Рецепт отсутствует в списке покупок"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Рецепт отсутствует в списке покупок"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class DownloadShoppingCartView(APIView):
@@ -255,17 +305,21 @@ class DownloadShoppingCartView(APIView):
                 if name not in ingredients:
                     ingredients[name] = {
                         'amount': amount,
-                        'measurement_unit': measurement_unit
+                        'measurement_unit': measurement_unit,
                     }
                 else:
                     ingredients[name]['amount'] += amount
 
-        content = "\n".join([
-            f"{name} ({data['measurement_unit']}) — {data['amount']}"
-            for name, data in ingredients.items()
-        ])
+        content = "\n".join(
+            [
+                f"{name} ({data['measurement_unit']}) — {data['amount']}"
+                for name, data in ingredients.items()
+            ]
+        )
 
         # Ответ в формате .txt
         response = HttpResponse(content, content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+        response['Content-Disposition'] = (
+            'attachment; ' 'filename="shopping_list.txt"'
+        )
         return response

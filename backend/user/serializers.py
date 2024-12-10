@@ -1,6 +1,7 @@
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+
 from api.models import Subscription
 
 User = get_user_model()
@@ -9,23 +10,34 @@ User = get_user_model()
 class UserRegistrationSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True,
-        validators=[UniqueValidator(queryset=User.objects.all(), message="Этот email уже зарегистрирован.")],
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message="Этот email уже зарегистрирован.",
+            )
+        ],
     )
     password = serializers.CharField(write_only=True, min_length=8)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password', 'first_name', 'last_name')
+        fields = (
+            'id',
+            'username',
+            'email',
+            'password',
+            'first_name',
+            'last_name',
+        )
 
     def create(self, validated_data):
-        user = User.objects.create_user(
+        return User.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'],
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
-            password=validated_data['password']
+            password=validated_data['password'],
         )
-        return user
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -33,7 +45,15 @@ class UserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email','id', 'username', 'first_name', 'last_name', 'is_subscribed', 'avatar']
+        fields = [
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'avatar',
+        ]
 
     def get_is_subscribed(self, obj):
         user = self.context['request'].user

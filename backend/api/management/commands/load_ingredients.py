@@ -1,8 +1,11 @@
 import csv
-from django.core.management.base import BaseCommand
-from api.models import Ingredient
 import os
+
 from django.conf import settings
+from django.core.management.base import BaseCommand
+
+from api.models import Ingredient
+
 
 class Command(BaseCommand):
     help = "Загрузить ингредиенты из CSV файла"
@@ -18,9 +21,11 @@ class Command(BaseCommand):
                     name, measurement_unit = row
                     Ingredient.objects.get_or_create(
                         name=name.strip(),
-                        measurement_unit=measurement_unit.strip()
+                        measurement_unit=measurement_unit.strip(),
                     )
-            self.stdout.write(self.style.SUCCESS("Ингредиенты успешно загружены!"))
+            self.stdout.write(
+                self.style.SUCCESS("Ингредиенты успешно загружены!")
+            )
         except FileNotFoundError:
             self.stdout.write(self.style.ERROR(f"Файл {file_path} не найден."))
         except Exception as e:

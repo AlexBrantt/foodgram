@@ -1,9 +1,15 @@
 from django_filters import rest_framework as filters
-from .models import Recipe
+
+from api.models import Recipe
+
 
 class RecipeFilter(filters.FilterSet):
-    tags = filters.AllValuesMultipleFilter(field_name='tags__slug', conjoined=False)
-    is_in_shopping_cart = filters.BooleanFilter(method='filter_is_in_shopping_cart')
+    tags = filters.AllValuesMultipleFilter(
+        field_name='tags__slug', conjoined=False
+    )
+    is_in_shopping_cart = filters.BooleanFilter(
+        method='filter_is_in_shopping_cart'
+    )
     is_favorited = filters.BooleanFilter(method='filter_is_favorited')
 
     class Meta:
