@@ -61,4 +61,4 @@ jobs:
           # Для каждого пересобранного образа 
           # устанавливаем тег latest, чтобы потом
           # на сервере и в docker-compose.yml не указывать версию
-          tags: alexbrant/foodgram_backend:latest 
+          tags: alexbrant/foodgram_backend:latest
