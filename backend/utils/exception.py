@@ -1,7 +1,7 @@
 from rest_framework.views import exception_handler
 
+
 def custom_exception_handler(exc, context):
-    # Используем стандартную обработку ошибок
     response = exception_handler(exc, context)
 
     # Обрабатываем ошибку 400
@@ -12,8 +12,6 @@ def custom_exception_handler(exc, context):
 
     # Обрабатываем ошибку 404
     if response is not None and response.status_code == 404:
-        response.data = {
-            "detail": "Страница не найдена."
-        }
+        response.data = {"detail": "Страница не найдена."}
 
     return response
