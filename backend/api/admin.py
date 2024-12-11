@@ -25,8 +25,8 @@ class ShoppingListAdmin(admin.ModelAdmin):
 
 @admin.register(FavoriteRecipe)
 class FavoriteRecipeAdmin(admin.ModelAdmin):
-    list_display = ("user", "recipe", "recipe_author")
-    list_filter = ("user", "recipe", "recipe_author")
+    list_display = ("user", "recipe", "recipe__author")
+    list_filter = ("user", "recipe", "recipe__author")
 
     def recipe_author(self, obj):
         return obj.recipe.author.username
