@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from api.filters import RecipeFilter
+from api.filters import IngredientFilter, RecipeFilter
 from api.models import (
     FavoriteRecipe,
     Ingredient,
@@ -119,10 +119,9 @@ class TagListView(APIView):
 class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [DjangoFilterBackend]
     permission_classes = [IsAuthenticatedOrReadOnly]
-    filterset_fields = ['measurement_unit']
-    search_fields = ['=name']
+    filterset_class = IngredientFilter
 
 
 class IngredientListView(APIView):
