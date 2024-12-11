@@ -14,22 +14,19 @@ from api.models import (
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ("user", "author")
-    search_fields = ("user__username", "author__username")
     list_filter = ("user", "author")
 
 
 @admin.register(ShoppingList)
 class ShoppingListAdmin(admin.ModelAdmin):
     list_display = ("user", "recipe")
-    search_fields = ("user__username", "recipe__name")
-    list_filter = ("user",)
+    list_filter = ("user", "recipe")
 
 
 @admin.register(FavoriteRecipe)
 class FavoriteRecipeAdmin(admin.ModelAdmin):
     list_display = ("user", "recipe", "recipe_author")
-    search_fields = ("user__username", "recipe__name")
-    list_filter = ("user",)
+    list_filter = ("user", "recipe", "recipe_author")
 
     def recipe_author(self, obj):
         return obj.recipe.author.username
@@ -58,7 +55,11 @@ class RecipeIngredientInline(admin.TabularInline):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ("name", "author", "cooking_time")
+    list_display = ("name", "author", "cooking_time", "favorite_count")
     search_fields = ("name", "author__username")
     list_filter = ("tags",)
     inlines = (RecipeIngredientInline,)
+
+    @admin.display(description='кол.во избранных')
+    def favorite_count(self, obj):
+        return obj.favorited_by.count()
