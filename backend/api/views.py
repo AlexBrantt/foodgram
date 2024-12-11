@@ -5,7 +5,6 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     IsAuthenticated,
@@ -15,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from api.filters import IngredientFilter, RecipeFilter
+from api.filters import RecipeFilter
 from api.models import (
     FavoriteRecipe,
     Ingredient,
@@ -25,6 +24,7 @@ from api.models import (
     Tag,
     User,
 )
+from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     FavoriteRecipeSerializer,
     IngredientSerializer,
@@ -61,7 +61,7 @@ class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.prefetch_related(
         'tags', 'recipe_ingredients__ingredient'
     )
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthorOrReadOnly]
     pagination_class = CustomPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
@@ -74,11 +74,11 @@ class RecipeViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def perform_update(self, serializer):
-        recipe = self.get_object()
-        if recipe.author != self.request.user:
-            raise PermissionDenied("Вы не можете изменять чужой рецепт.")
-        serializer.save()
+    # def perform_update(self, serializer):
+    #     recipe = self.get_object()
+    #     if recipe.author != self.request.user:
+    #         raise PermissionDenied("Вы не можете изменять чужой рецепт.")
+    #     serializer.save()
 
     def perform_destroy(self, instance):
         if instance.author != self.request.user:
@@ -119,19 +119,17 @@ class TagListView(APIView):
 class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = [DjangoFilterBackend]
     permission_classes = [IsAuthenticatedOrReadOnly]
-    filterset_class = IngredientFilter
 
 
 class IngredientListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request, *args, **kwargs):
-        name_filter = request.query_params.get('name', '').lower()
+        name_filter = request.query_params.get('name', '')
         if name_filter:
             ingredients = Ingredient.objects.filter(
-                name__istartswith=name_filter
+                name__startswith=name_filter
             )
         else:
             ingredients = Ingredient.objects.all()
