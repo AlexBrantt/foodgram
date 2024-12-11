@@ -30,6 +30,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'last_name',
         )
 
+    def validate(self, attrs):
+        first_name = attrs.get('first_name')
+        last_name = attrs.get('last_name')
+
+        if first_name is None or last_name is None:
+            raise serializers.ValidationError('Заполните обязательные поля')
+        return attrs
+
     def create(self, validated_data):
         return User.objects.create_user(
             email=validated_data.get('email'),
