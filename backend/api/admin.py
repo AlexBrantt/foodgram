@@ -11,29 +11,6 @@ from api.models import (
 )
 
 
-@admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ("user", "author")
-    list_filter = ("user", "author")
-
-
-@admin.register(ShoppingList)
-class ShoppingListAdmin(admin.ModelAdmin):
-    list_display = ("user", "recipe")
-    list_filter = ("user", "recipe")
-
-
-@admin.register(FavoriteRecipe)
-class FavoriteRecipeAdmin(admin.ModelAdmin):
-    list_display = ("user", "recipe", "recipe__author")
-    list_filter = ("user", "recipe", "recipe__author")
-
-    def recipe_author(self, obj):
-        return obj.recipe.author.username
-
-    recipe_author.short_description = 'Автор рецепта'
-
-
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ("name", "measurement_unit")
@@ -63,3 +40,8 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='кол.во избранных')
     def favorite_count(self, obj):
         return obj.favorited_by.count()
+
+
+admin.site.register(Subscription)
+admin.site.register(ShoppingList)
+admin.site.register(FavoriteRecipe)
