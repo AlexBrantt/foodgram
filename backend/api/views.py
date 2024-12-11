@@ -122,7 +122,7 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     permission_classes = [IsAuthenticatedOrReadOnly]
     filterset_fields = ['measurement_unit']
-    search_fields = ['name']
+    search_fields = ['=name']
 
 
 class IngredientListView(APIView):
