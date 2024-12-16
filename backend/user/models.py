@@ -1,8 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from user.validators import UsernameValidator
-from utils.constants import EMAIL_LENGTH
+from utils.constants import EMAIL_LENGTH, FIRST_LAST_NAME_LENGTH
 
 
 class User(AbstractUser):
@@ -13,19 +12,12 @@ class User(AbstractUser):
         null=True,
         default='avatars/default.png',
     )
-    username = models.CharField(
-        max_length=150,
-        unique=True,
-        help_text=(
-            'Required. 150 characters or fewer.'
-            ' Letters, digits and @/./+/-/_ only.'
-        ),
-        validators=[UsernameValidator],
-        error_messages={
-            'unique': ('A user with that username already exists.'),
-        },
+    first_name = models.CharField(
+        max_length=FIRST_LAST_NAME_LENGTH, blank=False, null=False
     )
-
+    last_name = models.CharField(
+        max_length=FIRST_LAST_NAME_LENGTH, blank=False, null=False
+    )
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 

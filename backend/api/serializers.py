@@ -330,12 +330,12 @@ class ShoppingListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingList
-        fields = ['recipe']  # Убираем id, так как он не нужен в ответе
+        fields = ['recipe']
 
     def to_representation(self, instance):
         """Извлекаем данные о рецепте вместо ключа `recipe`."""
         representation = super().to_representation(instance)
-        return representation['recipe']  # Возвращаем только данные о рецепте
+        return representation['recipe']
 
 
 class UserRegistrationSerializer(UserCreateSerializer):
@@ -352,6 +352,8 @@ class UserRegistrationSerializer(UserCreateSerializer):
         )
         extra_kwags = {
             'password': {'write_only': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True},
         }
 
     def create(self, validated_data):

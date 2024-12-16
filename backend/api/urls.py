@@ -35,7 +35,6 @@ urlpatterns = [
         DownloadShoppingCartView.as_view(),
         name='download_shopping_cart',
     ),
-    path("", include(router.urls)),
     path(
         "recipes/<int:id>/favorite/",
         FavoriteRecipeView.as_view(),
@@ -66,14 +65,10 @@ urlpatterns = [
         name='ingredients-detail',
     ),
     path(
-        'users/me/avatar/',
-        CustomUserViewSet.as_view({'put': 'avatar', 'delete': 'avatar'}),
-        name='user-avatar',
-    ),
-    path(
         'users/set_password/',
         ChangePasswordView.as_view(),
         name='set_password',
     ),
     path('auth/', include('djoser.urls.authtoken')),
+    path("", include(router.urls)),
 ]
