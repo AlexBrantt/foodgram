@@ -2,6 +2,8 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from api.views import (
+    ChangePasswordView,
+    CustomUserViewSet,
     DownloadShoppingCartView,
     FavoriteRecipeView,
     IngredientListView,
@@ -16,7 +18,8 @@ from api.views import (
 )
 
 router = DefaultRouter()
-router.register(r'recipes', RecipeViewSet, basename='recipe')
+router.register('recipes', RecipeViewSet, basename='recipe')
+router.register('users', CustomUserViewSet, basename='user')
 
 urlpatterns = [
     path(
@@ -62,4 +65,15 @@ urlpatterns = [
         IngredientViewSet.as_view({'get': 'retrieve'}),
         name='ingredients-detail',
     ),
+    path(
+        'users/me/avatar/',
+        CustomUserViewSet.as_view({'put': 'avatar', 'delete': 'avatar'}),
+        name='user-avatar',
+    ),
+    path(
+        'users/set_password/',
+        ChangePasswordView.as_view(),
+        name='set_password',
+    ),
+    path('auth/', include('djoser.urls.authtoken')),
 ]

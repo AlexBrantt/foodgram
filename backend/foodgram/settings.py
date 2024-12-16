@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv(key='SECRET_KEY')
 
 
-DEBUG = True
+DEBUG = os.getenv(key='DEBUG', default=False).lower() == 'true'
 
-ALLOWED_HOSTS = ['brantfood.zapto.org', '*']
+ALLOWED_HOSTS = os.getenv(key='ALLOWED_HOSTS').split(',')
 
 
 INSTALLED_APPS = [
@@ -73,17 +73,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('POSTGRES_DB', 'django'),
+#         'USER': os.getenv('POSTGRES_USER', 'django'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+#         'HOST': os.getenv('DB_HOST', ''),
+#         'PORT': os.getenv('DB_PORT', 5432),
+#     }
+# }
+
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'django'),
-        'USER': os.getenv('POSTGRES_USER', 'django'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', ''),
-        'PORT': os.getenv('DB_PORT', 5432),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -136,9 +143,9 @@ REST_FRAMEWORK = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'SERIALIZERS': {
-        'user_create': 'user.serializers.UserRegistrationSerializer',
-        'user': 'user.serializers.UserRegistrationSerializer',
-        'current_user': 'user.serializers.UserRegistrationSerializer',
+        'user_create': 'api.serializers.UserRegistrationSerializer',
+        'user': 'api.serializers.UserRegistrationSerializer',
+        'current_user': 'api.serializers.UserRegistrationSerializer',
     },
 }
 
