@@ -1,7 +1,6 @@
 import csv
-import os
+from pathlib import Path
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from api.models import Ingredient
@@ -11,7 +10,7 @@ class Command(BaseCommand):
     help = "Загрузить ингредиенты из CSV файла"
 
     def handle(self, *args, **kwargs):
-        file_path = os.path.join(settings.BASE_DIR, "data", "ingredients.csv")
+        file_path = str(Path(__file__).resolve().parent) + '/ingredients.csv'
 
         try:
             with open(file_path, "r", encoding="utf-8") as file:
