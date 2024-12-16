@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = "Загрузить ингредиенты из CSV файла"
 
     def handle(self, *args, **kwargs):
-        file_path = str(Path(__file__).resolve().parent) + '/ingredients.csv'
+        file_path = Path(__file__).resolve().parent / 'ingredients.csv'
 
         try:
             with open(file_path, "r", encoding="utf-8") as file:
