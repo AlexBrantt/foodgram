@@ -130,7 +130,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_ingredients(self, value):
-
         for ingredient in value:
             if not Ingredient.objects.filter(pk=ingredient['id']).exists():
                 raise serializers.ValidationError('Игредиент не существует')
@@ -163,11 +162,10 @@ class RecipeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('ingredients', [])
         tags_data = validated_data.pop('tags', [])
-        instance = super().update(instance, validated_data)
         instance.tags.set(tags_data)
         instance.ingredients.clear()
         self.create_ingredients(ingredients_data, instance)
-        return instance
+        return super().update(instance, validated_data)
 
     def to_representation(self, instance):
         context = self.context
