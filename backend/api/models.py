@@ -39,7 +39,6 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='recipes',
         verbose_name='Автор',
     )
     name = models.CharField(max_length=200, verbose_name='Название')
@@ -59,24 +58,22 @@ class Recipe(models.Model):
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
         ordering = ['-id']
+        default_related_name = 'recipes'
 
     def __str__(self):
         return self.name
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients'
-    )
-    ingredient = models.ForeignKey(
-        Ingredient, on_delete=models.CASCADE, related_name='ingredient_recipes'
-    )
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.PositiveIntegerField(verbose_name='Количество')
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
         unique_together = ('recipe', 'ingredient')
+        default_related_name = 'recipe_ingredients'
 
     def __str__(self):
         return f"{self.ingredient.name} - {self.amount}"
