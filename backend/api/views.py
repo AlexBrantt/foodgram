@@ -5,13 +5,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
+from django.db.models import Count
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticated,
@@ -42,7 +42,7 @@ from api.serializers import (
     UserListSerializer,
     UserRegistrationSerializer,
 )
-from utils.pagination import CustomPageNumberPagination
+from utils.pagination import CustomPageNumberPagination, SubscriptionPagination
 
 User = get_user_model()
 
@@ -53,11 +53,8 @@ class ShortLinkView(APIView):
     def get(self, request, id):
         try:
             _ = get_object_or_404(Recipe, id=id)
-
             url = f"{request.scheme}://{request.META['HTTP_HOST']}"
-
             short = f"{url}/s/{hashlib.md5(str(id).encode()).hexdigest()[:5]}"
-
             return Response({"short-link": short}, status=status.HTTP_200_OK)
 
         except Http404:
@@ -68,7 +65,7 @@ class ShortLinkView(APIView):
 
 
 class RecipeViewSet(ModelViewSet):
-    queryset = Recipe.objects.prefetch_related(
+    queryset = Recipe.objects.select_related('author').prefetch_related(
         'tags', 'recipe_ingredients__ingredient'
     )
     permission_classes = [IsAuthorOrReadOnly]
@@ -145,7 +142,8 @@ class SubscribeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, id):
-        author = get_object_or_404(User, id=id)
+        queryset = User.objects.annotate(recipes_count=Count('recipes')).all()
+        author = get_object_or_404(queryset, id=id)
 
         if request.user == author:
             return Response(
@@ -177,25 +175,16 @@ class SubscribeView(APIView):
     def delete(self, request, id):
         author = get_object_or_404(User, id=id)
 
-        try:
-            subscription = Subscription.objects.get(
-                user=request.user, author=author
-            )
-            subscription.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Subscription.DoesNotExist:
+        deleted_count, _ = Subscription.objects.filter(
+            user=request.user, author=author
+        ).delete()
+
+        if deleted_count == 0:
             return Response(
                 {"error": "Вы не подписаны на этого автора"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-
-class SubscriptionPagination(PageNumberPagination):
-    def get_page_size(self, request):
-        try:
-            return int(request.query_params.get('limit', self.page_size))
-        except (TypeError, ValueError):
-            return self.page_size
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SubscriptionListView(APIView):
