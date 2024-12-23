@@ -6,20 +6,20 @@ from api.views import (
     CustomUserViewSet,
     DownloadShoppingCartView,
     FavoriteRecipeView,
-    IngredientListView,
     IngredientViewSet,
     RecipeViewSet,
     ShoppingCartView,
     ShortLinkView,
     SubscribeView,
     SubscriptionListView,
-    TagListView,
     TagViewSet,
 )
 
 router = DefaultRouter()
 router.register('recipes', RecipeViewSet, basename='recipe')
 router.register('users', CustomUserViewSet, basename='user')
+router.register('tags', TagViewSet, basename='tags')
+router.register('ingredients', IngredientViewSet, basename='ingredients')
 
 urlpatterns = [
     path(
@@ -49,20 +49,6 @@ urlpatterns = [
         'recipes/<int:id>/get-link/',
         ShortLinkView.as_view(),
         name='get_short_link',
-    ),
-    path('tags/', TagListView.as_view(), name='tags-list'),
-    path(
-        'tags/<int:pk>/',
-        TagViewSet.as_view({'get': 'retrieve'}),
-        name='tags-detail',
-    ),
-    path(
-        'ingredients/', IngredientListView.as_view(), name='ingredients-list'
-    ),
-    path(
-        'ingredients/<int:pk>/',
-        IngredientViewSet.as_view({'get': 'retrieve'}),
-        name='ingredients-detail',
     ),
     path(
         'users/set_password/',

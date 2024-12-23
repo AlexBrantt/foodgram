@@ -215,30 +215,37 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "author"]
 
 
-class SubscriptionDetailSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source="author.username")
-    first_name = serializers.CharField(source="author.first_name")
-    last_name = serializers.CharField(source="author.last_name")
-    email = serializers.EmailField(source="author.email")
+class UserListSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    avatar = serializers.ImageField(source="author.avatar", required=False)
-    recipes_count = serializers.IntegerField(
-        source="author.recipes.count", read_only=True
-    )
-    recipes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'avatar',
+        ]
 
     def get_is_subscribed(self, obj):
-        """Проверяет, подписан ли текущий пользователь на автора."""
         user = self.context['request'].user
-        return Subscription.objects.filter(
-            user=user, author=obj.author
-        ).exists()
+        if user.is_authenticated:
+            return Subscription.objects.filter(user=user, author=obj).exists()
+        return False
+
+
+class SubscriptionDetailSerializer(UserListSerializer):
+    recipes = serializers.SerializerMethodField(read_only=True)
+    recipes_count = serializers.IntegerField(read_only=True)
 
     def get_recipes(self, obj):
         """Возвращает ограниченный список рецептов автора."""
         limit = self.context['request'].query_params.get('recipes_limit', None)
-        recipes = obj.author.recipes.all()
-        if limit is not None and limit.isdigit():
+        recipes = obj.recipes.all()
+        if limit and limit.isdigit():
             limit = int(limit)
             recipes = recipes[:limit]
 
@@ -246,16 +253,8 @@ class SubscriptionDetailSerializer(serializers.ModelSerializer):
             recipes, many=True, context=self.context
         ).data
 
-    class Meta:
-        model = Subscription
-        fields = [
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'email',
-            'is_subscribed',
-            'avatar',
+    class Meta(UserListSerializer.Meta):
+        fields = UserListSerializer.Meta.fields + [
             'recipes_count',
             'recipes',
         ]
@@ -312,25 +311,3 @@ class UserRegistrationSerializer(UserCreateSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
-
-
-class UserListSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = [
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'avatar',
-        ]
-
-    def get_is_subscribed(self, obj):
-        user = self.context['request'].user
-        if user.is_authenticated:
-            return Subscription.objects.filter(user=user, author=obj).exists()
-        return False

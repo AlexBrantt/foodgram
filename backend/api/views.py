@@ -11,7 +11,6 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticated,
@@ -21,7 +20,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from api.filters import RecipeFilter
+from api.filters import IngredientFilter, RecipeFilter
 from api.models import (
     FavoriteRecipe,
     Ingredient,
@@ -81,61 +80,21 @@ class RecipeViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def perform_destroy(self, instance):
-        if instance.author != self.request.user:
-            raise PermissionDenied("Вы не можете удалить чужой рецепт.")
-        instance.delete()
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-
-        if page is not None:
-            serializer = RecipeDetailSerializer(
-                page, many=True, context={'request': request}
-            )
-            return self.get_paginated_response(serializer.data)
-
-        serializer = RecipeDetailSerializer(
-            queryset, many=True, context={'request': request}
-        )
-        return Response(serializer.data)
-
-
-class TagViewSet(ModelViewSet):
+class TagViewSet(ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-
-class TagListView(APIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-    def get(self, request, *args, **kwargs):
-        tags = Tag.objects.all()
-        serializer = TagSerializer(tags, many=True)
-        return Response(serializer.data)
+    permission_classes = [AllowAny]
+    pagination_class = None
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-
-class IngredientListView(APIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-    def get(self, request, *args, **kwargs):
-        name_filter = request.query_params.get('name', '')
-        if name_filter:
-            ingredients = Ingredient.objects.filter(
-                name__startswith=name_filter
-            )
-        else:
-            ingredients = Ingredient.objects.all()
-        serializer = IngredientSerializer(ingredients, many=True)
-        return Response(serializer.data)
+    permission_classes = [AllowAny]
+    pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IngredientFilter
 
 
 class SubscribeView(APIView):
@@ -159,12 +118,10 @@ class SubscribeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        subscription = Subscription.objects.create(
-            user=request.user, author=author
-        )
+        Subscription.objects.create(user=request.user, author=author)
 
         serializer = SubscriptionDetailSerializer(
-            subscription,
+            author,
             context={
                 'request': request,
                 'limit': request.query_params.get('limit'),
@@ -192,12 +149,13 @@ class SubscriptionListView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        subscriptions = Subscription.objects.filter(user=user)
-
-        paginator = SubscriptionPagination()
-        paginated_subscriptions = paginator.paginate_queryset(
-            subscriptions, request
+        subscriptions = Subscription.objects.filter(user=user).values('author')
+        authors = User.objects.filter(id__in=subscriptions).annotate(
+            recipes_count=Count('recipes')
         )
+        # subscriptions = User.objects.filter(follower=user)
+        paginator = SubscriptionPagination()
+        paginated_subscriptions = paginator.paginate_queryset(authors, request)
 
         serializer = SubscriptionDetailSerializer(
             paginated_subscriptions, many=True, context={'request': request}
