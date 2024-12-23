@@ -244,6 +244,21 @@ class ShoppingCartView(APIView):
 class DownloadShoppingCartView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def content_prepare(self, ingredients):
+        content = "\n".join(
+            [
+                f"{row['ingredient__name']} — {row['amount']} "
+                f"{row['ingredient__measurement_unit']}"
+                for row in ingredients
+            ]
+        )
+
+        response = HttpResponse(content, content_type="text/plain")
+        response['Content-Disposition'] = (
+            'attachment; ' 'filename="shopping_list.txt"'
+        )
+        return response
+
     def get(self, request):
         user = request.user
         ingredients_list = (
@@ -254,20 +269,7 @@ class DownloadShoppingCartView(APIView):
             .annotate(amount=Sum('amount'))
             .order_by('ingredient__name', 'ingredient__measurement_unit')
         )
-
-        content = "\n".join(
-            [
-                f"{row['ingredient__name']} — {row['amount']} "
-                f"{row['ingredient__measurement_unit']}"
-                for row in ingredients_list
-            ]
-        )
-
-        response = HttpResponse(content, content_type="text/plain")
-        response['Content-Disposition'] = (
-            'attachment; ' 'filename="shopping_list.txt"'
-        )
-        return response
+        return self.content_prepare(ingredients_list)
 
 
 class CustomUserViewSet(ModelViewSet):
