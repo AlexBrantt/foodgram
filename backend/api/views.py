@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -25,6 +25,7 @@ from api.models import (
     FavoriteRecipe,
     Ingredient,
     Recipe,
+    RecipeIngredient,
     ShoppingList,
     Subscription,
     Tag,
@@ -37,6 +38,7 @@ from api.serializers import (
     RecipeSerializer,
     ShoppingListSerializer,
     SubscriptionDetailSerializer,
+    SubscriptionSerializer,
     TagSerializer,
     UserListSerializer,
     UserRegistrationSerializer,
@@ -118,7 +120,12 @@ class SubscribeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        Subscription.objects.create(user=request.user, author=author)
+        data = {'author': author.id, 'user': request.user.id}
+        serializer = SubscriptionSerializer(
+            data=data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
         serializer = SubscriptionDetailSerializer(
             author,
@@ -153,7 +160,6 @@ class SubscriptionListView(APIView):
         authors = User.objects.filter(id__in=subscriptions).annotate(
             recipes_count=Count('recipes')
         )
-        # subscriptions = User.objects.filter(follower=user)
         paginator = SubscriptionPagination()
         paginated_subscriptions = paginator.paginate_queryset(authors, request)
 
@@ -240,28 +246,20 @@ class DownloadShoppingCartView(APIView):
 
     def get(self, request):
         user = request.user
-        shopping_list = ShoppingList.objects.filter(user=user)
-        ingredients = {}
-
-        for item in shopping_list:
-            for recipe_ingredient in item.recipe.recipe_ingredients.all():
-                ingredient = recipe_ingredient.ingredient
-                amount = recipe_ingredient.amount
-                name = ingredient.name
-                measurement_unit = ingredient.measurement_unit
-
-                if name not in ingredients:
-                    ingredients[name] = {
-                        'amount': amount,
-                        'measurement_unit': measurement_unit,
-                    }
-                else:
-                    ingredients[name]['amount'] += amount
+        ingredients_list = (
+            RecipeIngredient.objects.filter(
+                recipe__in_shopping_lists__user=user
+            )
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .annotate(amount=Sum('amount'))
+            .order_by('ingredient__name', 'ingredient__measurement_unit')
+        )
 
         content = "\n".join(
             [
-                f"{name} ({data['measurement_unit']}) — {data['amount']}"
-                for name, data in ingredients.items()
+                f"{row['ingredient__name']} — {row['amount']} "
+                f"{row['ingredient__measurement_unit']}"
+                for row in ingredients_list
             ]
         )
 

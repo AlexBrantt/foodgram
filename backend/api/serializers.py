@@ -206,13 +206,10 @@ class RecipeSerializer(RecipeDetailSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        slug_field="username", read_only=True
-    )
 
     class Meta:
         model = Subscription
-        fields = ["id", "user", "author"]
+        fields = ["user", "author"]
 
 
 class UserListSerializer(serializers.ModelSerializer):
