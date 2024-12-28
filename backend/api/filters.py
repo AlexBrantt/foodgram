@@ -1,6 +1,6 @@
 from django_filters import rest_framework as filters
 
-from api.models import Ingredient, Recipe
+from recipes.models import Ingredient, Recipe
 
 
 class RecipeFilter(filters.FilterSet):

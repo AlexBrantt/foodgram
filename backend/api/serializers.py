@@ -4,7 +4,7 @@ from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
 
-from api.models import (
+from recipes.models import (
     FavoriteRecipe,
     Ingredient,
     Recipe,
@@ -241,7 +241,7 @@ class SubscriptionDetailSerializer(UserListSerializer):
     def get_recipes(self, obj):
         """Возвращает ограниченный список рецептов автора."""
         limit = self.context['request'].query_params.get('recipes_limit', None)
-        recipes = obj.recipes.all()
+        recipes = obj.recipe_author.all()
         if limit and limit.isdigit():
             limit = int(limit)
             recipes = recipes[:limit]

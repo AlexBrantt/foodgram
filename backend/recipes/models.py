@@ -57,6 +57,7 @@ class Recipe(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор',
+        related_name='recipe_author',
     )
     name = models.CharField(
         max_length=RICIPE_NAME_MAX_LENGTH, verbose_name='Название'
@@ -66,9 +67,16 @@ class Recipe(models.Model):
     )
     text = models.TextField(verbose_name='Описание')
     ingredients = models.ManyToManyField(
-        Ingredient, through='RecipeIngredient', verbose_name='Ингредиенты'
+        Ingredient,
+        through='RecipeIngredient',
+        verbose_name='Ингредиенты',
+        related_name='ingredients_in_recipe',
     )
-    tags = models.ManyToManyField(Tag, verbose_name='Теги')
+    tags = models.ManyToManyField(
+        Tag,
+        verbose_name='Теги',
+        related_name='recipe_tags',
+    )
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name='Время приготовления (мин)',
         validators=[

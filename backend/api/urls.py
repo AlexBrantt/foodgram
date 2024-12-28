@@ -27,7 +27,7 @@ urlpatterns = [
     ),
     path(
         'users/subscriptions/',
-        SubscriptionListView.as_view(),
+        SubscriptionListView.as_view({'get': 'list'}),
         name='subscription_list',
     ),
     path(

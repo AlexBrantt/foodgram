@@ -21,15 +21,6 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api.filters import IngredientFilter, RecipeFilter
-from api.models import (
-    FavoriteRecipe,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingList,
-    Subscription,
-    Tag,
-)
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     FavoriteRecipeSerializer,
@@ -43,7 +34,18 @@ from api.serializers import (
     UserListSerializer,
     UserRegistrationSerializer,
 )
-from utils.pagination import CustomPageNumberPagination, SubscriptionPagination
+from recipes.models import (
+    FavoriteRecipe,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingList,
+    Subscription,
+    Tag,
+)
+from utils.pagination import (
+    CustomPageNumberPagination,  # , SubscriptionPagination
+)
 
 User = get_user_model()
 
@@ -103,7 +105,9 @@ class SubscribeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, id):
-        queryset = User.objects.annotate(recipes_count=Count('recipes')).all()
+        queryset = User.objects.annotate(
+            recipes_count=Count('recipe_author')
+        ).all()
         author = get_object_or_404(queryset, id=id)
 
         if request.user == author:
@@ -151,23 +155,29 @@ class SubscribeView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class SubscriptionListView(APIView):
+class SubscriptionListView(ModelViewSet):
+    queryset = Subscription.objects.all()
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPageNumberPagination
+    serializer_class = SubscriptionDetailSerializer
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        subscriptions = Subscription.objects.filter(user=user).values('author')
+        subscriptions = self.queryset.filter(user=user).values('author')
         authors = User.objects.filter(id__in=subscriptions).annotate(
-            recipes_count=Count('recipes')
+            recipes_count=Count('recipe_author')
         )
-        paginator = SubscriptionPagination()
-        paginated_subscriptions = paginator.paginate_queryset(authors, request)
+        # paginator = SubscriptionPagination()
+        # paginated_subscriptions = paginator.paginate_queryset(authors, request)
 
         serializer = SubscriptionDetailSerializer(
-            paginated_subscriptions, many=True, context={'request': request}
+            # paginated_subscriptions,
+            self.paginate_queryset(authors),
+            many=True,
+            context={'request': request},
         )
 
-        return paginator.get_paginated_response(serializer.data)
+        return self.get_paginated_response(serializer.data)
 
 
 class FavoriteRecipeView(APIView):
