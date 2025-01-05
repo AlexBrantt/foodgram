@@ -1,7 +1,6 @@
 import base64
 
 from django.core.files.base import ContentFile
-from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
 
 from recipes.models import (
@@ -209,7 +208,22 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subscription
-        fields = ["user", "author"]
+        fields = ['user', 'author']
+
+    def validate(self, attrs):
+        author = attrs.get('author')
+        user = attrs.get('user')
+
+        if user == author:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя'
+            )
+
+        if Subscription.objects.filter(user=user, author=author).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого автора'
+            )
+        return attrs
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -238,6 +252,12 @@ class SubscriptionDetailSerializer(UserListSerializer):
     recipes = serializers.SerializerMethodField(read_only=True)
     recipes_count = serializers.IntegerField(read_only=True)
 
+    class Meta(UserListSerializer.Meta):
+        fields = UserListSerializer.Meta.fields + [
+            'recipes_count',
+            'recipes',
+        ]
+
     def get_recipes(self, obj):
         """Возвращает ограниченный список рецептов автора."""
         limit = self.context['request'].query_params.get('recipes_limit', None)
@@ -250,61 +270,44 @@ class SubscriptionDetailSerializer(UserListSerializer):
             recipes, many=True, context=self.context
         ).data
 
-    class Meta(UserListSerializer.Meta):
-        fields = UserListSerializer.Meta.fields + [
-            'recipes_count',
-            'recipes',
-        ]
-
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='recipe.id', read_only=True)
-    name = serializers.CharField(source='recipe.name', read_only=True)
-    image = serializers.ImageField(source='recipe.image', read_only=True)
-    cooking_time = serializers.IntegerField(
-        source='recipe.cooking_time', read_only=True
-    )
+    """Сериализатор для избранного."""
 
     class Meta:
         model = FavoriteRecipe
-        fields = ["id", "name", "image", "cooking_time"]
+        fields = ['recipe', 'user']
+
+    def validate(self, attrs):
+        recipe = attrs.get('recipe')
+        user = attrs.get('user')
+        if FavoriteRecipe.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError('Рецепт уже в избранном')
+        return attrs
+
+    def to_representation(self, instance):
+        return SimpleRecipeSerializer(
+            instance.recipe, context=self.context
+        ).data
 
 
 class ShoppingListSerializer(serializers.ModelSerializer):
     """Сериализатор для корзины покупок."""
 
-    recipe = SimpleRecipeSerializer(read_only=True)
-
     class Meta:
         model = ShoppingList
-        fields = ['recipe']
+        fields = ['recipe', 'user']
+
+        def validate(self, attrs):
+            recipe = attrs.get('recipe')
+            user = attrs.get('user')
+            if ShoppingList.objects.filter(user=user, recipe=recipe).exists():
+                return serializers.ValidationError(
+                    'Рецепт уже в списке покупок'
+                )
+            return attrs
 
     def to_representation(self, instance):
-        """Извлекаем данные о рецепте вместо ключа `recipe`."""
-        representation = super().to_representation(instance)
-        return representation['recipe']
-
-
-class UserRegistrationSerializer(UserCreateSerializer):
-
-    class Meta:
-        model = User
-        fields = (
-            'id',
-            'username',
-            'email',
-            'password',
-            'first_name',
-            'last_name',
-        )
-        extra_kwags = {
-            'password': {'write_only': True},
-            'first_name': {'required': True},
-            'last_name': {'required': True},
-        }
-
-    def create(self, validated_data):
-        user = User(**validated_data)
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
+        return SimpleRecipeSerializer(
+            instance.recipe, context=self.context
+        ).data
