@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import Count, Sum
-from django.http import Http404, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
@@ -41,9 +41,7 @@ from recipes.models import (
     Subscription,
     Tag,
 )
-from utils.pagination import (
-    CustomPageNumberPagination,  # , SubscriptionPagination
-)
+from utils.pagination import CustomPageNumberPagination
 
 User = get_user_model()
 
@@ -52,17 +50,10 @@ class ShortLinkView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request, id):
-        try:
-            _ = get_object_or_404(Recipe, id=id)
-            url = f"{request.scheme}://{request.META['HTTP_HOST']}"
-            short = f"{url}/s/{hashlib.md5(str(id).encode()).hexdigest()[:5]}"
-            return Response({"short-link": short}, status=status.HTTP_200_OK)
-
-        except Http404:
-            return Response(
-                {'detail': 'Страница не найдена.'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        _ = get_object_or_404(Recipe, id=id)
+        url = f"{request.scheme}://{request.META['HTTP_HOST']}"
+        short = f"{url}/s/{hashlib.md5(str(id).encode()).hexdigest()[:5]}"
+        return Response({'short-link': short}, status=status.HTTP_200_OK)
 
 
 class RecipeViewSet(ModelViewSet):
@@ -124,10 +115,14 @@ class SubscribeView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
-        author = get_object_or_404(User, id=id)
+        if not User.objects.filter(id=id).exists():
+            return Response(
+                {'error': 'Автор не найден'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         deleted_count, _ = Subscription.objects.filter(
-            user=request.user, author=author
+            user=request.user, author_id=id
         ).delete()
 
         if deleted_count == 0:
@@ -216,7 +211,7 @@ class DownloadShoppingCartView(APIView):
     permission_classes = [IsAuthenticated]
 
     def content_prepare(self, ingredients):
-        return "\n".join(
+        return '\n'.join(
             [
                 f"{row['ingredient__name']} — {row['amount']} "
                 f"{row['ingredient__measurement_unit']}"
@@ -235,7 +230,7 @@ class DownloadShoppingCartView(APIView):
             .order_by('ingredient__name', 'ingredient__measurement_unit')
         )
         response = HttpResponse(
-            self.content_prepare(ingredients_list), content_type="text/plain"
+            self.content_prepare(ingredients_list), content_type='text/plain'
         )
         response['Content-Disposition'] = (
             'attachment; ' 'filename="shopping_list.txt"'
@@ -252,9 +247,9 @@ class CustomUserViewSet(UserViewSet):
     )
     def me(self, request, *args, **kwargs):
         """Возвращает профиль текущего пользователя."""
-        self.get_object = self.get_instance
-        if request.method == "GET":
-            return self.retrieve(request, *args, **kwargs)
+        return Response(
+            self.get_serializer(request.user).data, status=status.HTTP_200_OK
+        )
 
     @action(
         detail=False,
@@ -271,7 +266,8 @@ class CustomUserViewSet(UserViewSet):
             avatar_data = request.data.get('avatar')
             if not avatar_data:
                 return Response(
-                    {"detail": "Поле Avatar обязательное."}, status=400
+                    {'detail': 'Поле Avatar обязательное.'},
+                    status.HTTP_400_BAD_REQUEST,
                 )
 
             try:
@@ -282,13 +278,17 @@ class CustomUserViewSet(UserViewSet):
                 user.avatar.save(avatar_file.name, avatar_file, save=True)
             except Exception as e:
                 raise ValidationError(
-                    f"Ошибка при обработке аватарки: {str(e)}"
+                    f'Ошибка при обработке аватарки: {str(e)}'
                 )
 
-            return Response({"avatar": user.avatar.url})
+            return Response({'avatar': user.avatar.url})
 
         # Удаление аватарки
         if user.avatar:
             user.avatar.delete()
-            return Response({"detail": "Аватарка удалена."}, status=204)
-        return Response({"detail": "Аватарка не найдена."}, status=400)
+            return Response(
+                {'detail': 'Аватарка удалена.'}, status.HTTP_204_NO_CONTENT
+            )
+        return Response(
+            {'detail': 'Аватарка не найдена.'}, status.HTTP_400_BAD_REQUEST
+        )

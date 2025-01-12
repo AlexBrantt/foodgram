@@ -73,32 +73,42 @@ class RecipeDetailSerializer(SimpleRecipeSerializer):
     is_in_shopping_cart = serializers.SerializerMethodField()
     image = Base64ImageField()
 
+    class Meta(SimpleRecipeSerializer.Meta):
+        fields = SimpleRecipeSerializer.Meta.fields + [
+            'tags',
+            'author',
+            'ingredients',
+            'is_favorited',
+            'is_in_shopping_cart',
+            'text',
+        ]
+
     def get_author(self, obj):
         user = obj.author
         request_user = self.context['request'].user
         return {
-            "email": user.email,
-            "id": user.id,
-            "username": user.username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "is_subscribed": (
+            'email': user.email,
+            'id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_subscribed': (
                 Subscription.objects.filter(
                     user=request_user, author=user
                 ).exists()
                 if request_user.is_authenticated
                 else False
             ),
-            "avatar": user.avatar.url if user.avatar else None,
+            'avatar': user.avatar.url if user.avatar else None,
         }
 
     def get_ingredients(self, obj):
         return [
             {
-                "id": item.ingredient.id,
-                "name": item.ingredient.name,
-                "measurement_unit": item.ingredient.measurement_unit,
-                "amount": item.amount,
+                'id': item.ingredient.id,
+                'name': item.ingredient.name,
+                'measurement_unit': item.ingredient.measurement_unit,
+                'amount': item.amount,
             }
             for item in obj.recipe_ingredients.all()
         ]
@@ -118,16 +128,6 @@ class RecipeDetailSerializer(SimpleRecipeSerializer):
             if user.is_authenticated
             else False
         )
-
-    class Meta(SimpleRecipeSerializer.Meta):
-        fields = SimpleRecipeSerializer.Meta.fields + [
-            "tags",
-            "author",
-            "ingredients",
-            "is_favorited",
-            "is_in_shopping_cart",
-            "text",
-        ]
 
 
 class RecipeSerializer(RecipeDetailSerializer):
@@ -168,7 +168,7 @@ class RecipeSerializer(RecipeDetailSerializer):
                 raise serializers.ValidationError('Игредиент не существует')
             if ingredient['amount'] <= 0:
                 raise serializers.ValidationError(
-                    "Количество ингредиента должно быть больше 0."
+                    'Количество ингредиента должно быть больше 0.'
                 )
         return value
 
