@@ -45,6 +45,10 @@ class Base64ImageField(serializers.ImageField):
         return super().to_internal_value(data)
 
 
+class AvatarSerializer(serializers.Serializer):
+    avatar = Base64ImageField()
+
+
 class TagPrimaryKeySerializer(serializers.PrimaryKeyRelatedField):
     def to_representation(self, value):
         return TagSerializer(value).data

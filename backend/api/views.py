@@ -1,9 +1,6 @@
-import base64
 import hashlib
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
 from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -23,6 +20,7 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from api.filters import IngredientFilter, RecipeFilter
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
+    AvatarSerializer,
     FavoriteRecipeSerializer,
     IngredientSerializer,
     RecipeDetailSerializer,
@@ -115,21 +113,21 @@ class SubscribeView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
-        if not User.objects.filter(id=id).exists():
-            return Response(
-                {'error': 'Автор не найден'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
         deleted_count, _ = Subscription.objects.filter(
-            user=request.user, author_id=id
+            user=request.user, author_id=id, author__isnull=False
         ).delete()
 
         if deleted_count == 0:
+            if not User.objects.filter(id=id).exists():
+                return Response(
+                    {'error': 'Автор не найден'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
             return Response(
                 {'error': 'Вы не подписаны на этого автора'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -263,25 +261,16 @@ class CustomUserViewSet(UserViewSet):
 
         if request.method == 'PUT':
             # Обновление аватарки
-            avatar_data = request.data.get('avatar')
-            if not avatar_data:
-                return Response(
-                    {'detail': 'Поле Avatar обязательное.'},
-                    status.HTTP_400_BAD_REQUEST,
-                )
-
-            try:
-                format, imgstr = avatar_data.split(';base64,')
-                ext = format.split('/')[1]
-                img_data = base64.b64decode(imgstr)
-                avatar_file = ContentFile(img_data, name=f"avatar.{ext}")
-                user.avatar.save(avatar_file.name, avatar_file, save=True)
-            except Exception as e:
-                raise ValidationError(
-                    f'Ошибка при обработке аватарки: {str(e)}'
-                )
-
-            return Response({'avatar': user.avatar.url})
+            serializer = AvatarSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user.avatar.save(
+                serializer.validated_data['avatar'].name,
+                serializer.validated_data['avatar'],
+                save=True,
+            )
+            return Response(
+                {'avatar': user.avatar.url}, status=status.HTTP_200_OK
+            )
 
         # Удаление аватарки
         if user.avatar:
