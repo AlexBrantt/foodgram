@@ -1,4 +1,37 @@
-Находясь в папке infra, выполните команду docker-compose up. При выполнении этой команды контейнер frontend, описанный в docker-compose.yml, подготовит файлы, необходимые для работы фронтенд-приложения, а затем прекратит свою работу.
+Для ревью
 
-По адресу http://localhost изучите фронтенд веб-приложения, а по адресу http://localhost/api/docs/ — спецификацию API.
+ip: 89.169.161.212
+Url: brantfood.zapto.org
+Admin email: a@ya.ru
+Admin pass: 111111
 
+
+Проект Foodgram
+Соцсеть для рецептов, здесь можно:
+Делиться рецептами, добавлять рецепты в избранное, составлять список покупок для желаемых рецптов,
+подписываться на авторов любимых рецептов и много чего еще!
+
+Установка и запуск:
+
+1. Скопируйте проект на свой сервер
+git clone git@github.com:AlexBrantt/foodgram.git
+
+2. Создать файл .env с таким наполнением:
+SECRET_KEY=<Ключ проекта Django>
+POSTGRES_USER=<пользователь бд>
+POSTGRES_PASSWORD=<пароль бд>
+POSTGRES_DB=django
+DB_HOST=db
+DB_PORT=5432
+DEBUG=False
+ALLOWED_HOSTS=<ваш url, ip>
+
+3. Соберите и запустите контейнеры на сервере
+sudo docker compose -f docker-compose.yml up -d
+
+4. Соберите статику и примените миграции командами
+sudo docker compose exec backend python manage.py collectstatic
+sudo docker compose exec backend python manage.py migrate
+
+5. Загрузите данные ингредентов в бд
+sudo docker compose exec backend python manage.py load_ingredients

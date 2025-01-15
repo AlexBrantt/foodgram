@@ -113,16 +113,17 @@ class SubscribeView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
+        if not User.objects.filter(id=id).exists():
+            return Response(
+                {'error': 'Автор не найден'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         deleted_count, _ = Subscription.objects.filter(
-            user=request.user, author_id=id, author__isnull=False
+            user=request.user, author_id=id
         ).delete()
 
         if deleted_count == 0:
-            if not User.objects.filter(id=id).exists():
-                return Response(
-                    {'error': 'Автор не найден'},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
             return Response(
                 {'error': 'Вы не подписаны на этого автора'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -167,9 +168,14 @@ class FavoriteRecipeView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
-        recipe = get_object_or_404(Recipe, id=id)
+        if not Recipe.objects.filter(id=id).exists():
+            return Response(
+                {'error': 'Рецепт не найден'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         deleted, _ = FavoriteRecipe.objects.filter(
-            user=request.user, recipe=recipe
+            user=request.user, recipe_id=id
         ).delete()
         if deleted:
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -193,9 +199,13 @@ class ShoppingCartView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
-        recipe = get_object_or_404(Recipe, id=id)
+        if not Recipe.objects.filter(id=id).exists():
+            return Response(
+                {'error': 'Рецепт не найден'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         deleted, _ = ShoppingList.objects.filter(
-            user=request.user, recipe=recipe
+            user=request.user, recipe_id=id
         ).delete()
         if deleted:
             return Response(status=status.HTTP_204_NO_CONTENT)
