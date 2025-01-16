@@ -14,7 +14,7 @@ class User(AbstractUser):
         upload_to='avatars/',
         blank=True,
         null=True,
-        default='avatars/default.png',
+        default='',
         verbose_name='Аватарка',
     )
     first_name = models.CharField(
