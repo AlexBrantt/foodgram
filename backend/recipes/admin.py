@@ -41,7 +41,42 @@ class RecipeAdmin(admin.ModelAdmin):
     def favorite_count(self, obj):
         return obj.favorited_by.count()
 
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related('author').prefetch_related(
+            'tags', 'ingredients'
+        )
+        return queryset
 
-admin.site.register(Subscription)
-admin.site.register(ShoppingList)
-admin.site.register(FavoriteRecipe)
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'author')
+    search_fields = ('user__username', 'author__username')
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related('user', 'author')
+        return queryset
+
+
+@admin.register(ShoppingList)
+class ShoppingListAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
+    search_fields = ('user__username', 'recipe__name')
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related('user', 'recipe')
+        return queryset
+
+
+@admin.register(FavoriteRecipe)
+class FavoriteRecipeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
+    search_fields = ('user__username', 'recipe__name')
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related('user', 'recipe')
+        return queryset
